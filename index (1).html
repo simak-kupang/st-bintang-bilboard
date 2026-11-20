@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ST BINTANG BILBOARD – Sewa Billboard Kota Kupang</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#fff;--fg:#1a1a2e;--mut:#6b7280;--card:#f4f5f9;--ac:#c2410c;--bd:#e3e5ec}
+@media(prefers-color-scheme:dark){:root{--bg:#12131a;--fg:#eceef5;--mut:#9aa0b4;--card:#1c1e29;--bd:#2c2f3d}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--ac);color:#fff;position:sticky;top:0;z-index:1000}
+header b{font-size:17px;letter-spacing:.5px}header a{color:#fff;font-size:13px;opacity:.9}
+#map,#pmap{height:42vh;width:100%}#pmap{height:240px;border-radius:10px}
+.bar{display:flex;gap:8px;padding:10px 12px;overflow-x:auto}
+.bar input,.bar select,input,select,textarea{font:inherit;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);width:100%}
+.bar input{min-width:170px}.bar select{width:auto}
+.list{display:grid;gap:12px;padding:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;overflow:hidden;cursor:pointer}
+.card img,.card .ph{width:100%;height:150px;object-fit:cover;display:block;background:var(--bd)}
+.card div.b{padding:10px 12px}.card h3{margin:0 0 2px;font-size:16px}.mut{color:var(--mut);font-size:13px}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:var(--bd)}
+.ok{background:#16a34a;color:#fff}.no{background:#dc2626;color:#fff}
+.btn{display:inline-block;padding:10px 14px;border:0;border-radius:9px;background:var(--ac);color:#fff;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+.btn.g{background:#16a34a}.btn.l{background:var(--card);color:var(--fg);border:1px solid var(--bd)}.btn.r{background:#dc2626}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;overflow:auto}
+.modal.on{display:block}.sheet{background:var(--bg);max-width:640px;margin:0 auto;min-height:100%;padding:0 0 24px}
+.gal{display:flex;overflow-x:auto;scroll-snap-type:x mandatory}.gal>*{flex:0 0 100%;scroll-snap-align:start;height:260px;object-fit:cover;background:#000}
+.in{padding:14px 16px}.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.row>*{flex:1}
+.price{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.price div{background:var(--card);border-radius:10px;padding:8px;text-align:center}.price b{display:block;font-size:14px}
+dl{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;margin:0}dt{color:var(--mut)}dd{margin:0}
+label{display:block;margin:10px 0 3px;font-size:13px;color:var(--mut)}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.thumbs img,.thumbs video{width:70px;height:70px;object-fit:cover;border-radius:8px}
+#adm{display:none}.fab{position:fixed;right:16px;bottom:16px;z-index:900;box-shadow:0 4px 12px #0005}
+</style>
+</head>
+<body>
+<header><b>ST BINTANG BILBOARD</b><a href="#admin" id="lnk">Admin</a></header>
+
+<main id="pub">
+  <div id="map"></div>
+  <div class="bar">
+    <input id="q" placeholder="Cari nama / jalan / kawasan…">
+    <select id="fs"><option value="">Semua status</option><option value="tersedia">Tersedia</option><option value="terisi">Terisi</option></select>
+    <select id="ft"><option value="">Semua tipe</option><option>Billboard</option><option>Baliho</option><option>Videotron</option><option>Neon box</option><option>Lainnya</option></select>
+  </div>
+  <div class="list" id="list"></div>
+</main>
+
+<main id="adm">
+  <div class="in" id="login">
+    <h3>Masuk Admin</h3>
+    <label>Email</label><input id="em" type="email"><label>Password</label><input id="pw" type="password">
+    <p><button class="btn" onclick="login()">Masuk</button></p>
+  </div>
+  <div id="panel" style="display:none">
+    <div class="bar"><input id="aq" placeholder="Cari papan…" oninput="renderAdmin()"><button class="btn l" onclick="logout()">Keluar</button></div>
+    <div class="list" id="alist"></div>
+    <button class="btn fab" onclick="openForm()">+ Papan Baru</button>
+  </div>
+</main>
+
+<div class="modal" id="dm"><div class="sheet" id="dsheet"></div></div>
+
+<div class="modal" id="fm"><div class="sheet"><div class="in">
+  <h3 id="ft2">Papan Baru</h3>
+  <label>Kode (mis. KPG-001)</label><input id="f_kode">
+  <label>Nama / titik papan *</label><input id="f_nama">
+  <label>Alamat</label><input id="f_alamat">
+  <label>Kawasan (mis. El Tari, Oebobo)</label><input id="f_kawasan">
+  <label>Lokasi * — ketuk peta atau pakai GPS</label>
+  <div id="pmap"></div>
+  <div class="row"><button class="btn l" onclick="gps()">📍 Pakai lokasi saya</button><span class="mut" id="coord">Belum dipilih</span></div>
+  <div class="g2"><div><label>Tipe</label><select id="f_tipe"><option>Billboard</option><option>Baliho</option><option>Videotron</option><option>Neon box</option><option>Lainnya</option></select></div>
+  <div><label>Ukuran (mis. 4x8 m)</label><input id="f_ukuran"></div>
+  <div><label>Jumlah sisi</label><select id="f_sisi"><option>1 sisi</option><option>2 sisi</option></select></div>
+  <div><label>Pencahayaan</label><select id="f_cahaya"><option>Ada lampu</option><option>Tanpa lampu</option><option>LED</option></select></div></div>
+  <label>Arah hadap (mis. dari arah bandara)</label><input id="f_arah">
+  <label>Spesifikasi lain (tinggi tiang, konstruksi, dll)</label><textarea id="f_spek" rows="2"></textarea>
+  <div class="g2"><div><label>Trafik sekitar</label><select id="f_trafik"><option>Rendah</option><option selected>Sedang</option><option>Tinggi</option><option>Sangat tinggi</option></select></div>
+  <div><label>Status</label><select id="f_status"><option value="tersedia">Tersedia</option><option value="terisi">Terisi</option></select></div></div>
+  <label>Catatan keramaian (jam sibuk, pasar, sekolah, dll)</label><textarea id="f_tcat" rows="2"></textarea>
+  <div class="g2"><div><label>Harga / tahun (Rp)</label><input id="f_ht" inputmode="numeric"></div>
+  <div><label>Harga / bulan (Rp)</label><input id="f_hb" inputmode="numeric"></div>
+  <div><label>Harga / minggu (Rp)</label><input id="f_hm" inputmode="numeric"></div></div>
+  <label>🔒 Pemilik papan (hanya admin)</label><input id="f_pemilik" placeholder="Nama pemilik">
+  <input id="f_kontak" placeholder="Kontak pemilik" style="margin-top:6px">
+  <textarea id="f_pcat" rows="2" placeholder="Catatan internal (fee, perjanjian)" style="margin-top:6px"></textarea>
+  <label>Foto / video singkat (maks. video 50 MB)</label>
+  <input type="file" id="f_files" accept="image/*,video/*" multiple>
+  <div class="thumbs" id="thumbs"></div>
+  <div class="row" style="margin-top:18px"><button class="btn l" onclick="closeM('fm')">Batal</button><button class="btn" id="sv" onclick="save()">Simpan</button></div>
+</div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+// ====== ISI 3 BARIS INI ======
+const SUPABASE_URL = "https://wajgualkfqwmeyoxlduj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_s9zBQqdPhwLk0d-2LZmTkw_dy6FBKJX";
+const WA = "6285134419340"; // nomor WhatsApp Anda, format 62…, tanpa + atau 0
+// =============================
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rp = n => n ? "Rp " + Number(n).toLocaleString("id-ID") : "—";
+let items = [], markers = {}, map, pmap, pin, editing = null, media = [], isAdmin = false;
+
+function init() {
+  map = L.map("map").setView([-10.1718, 123.607], 13);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution: "© OpenStreetMap"}).addTo(map);
+  ["q","fs","ft"].forEach(i => $(i).oninput = renderPublic);
+  load(); route();
+}
+async function load() {
+  const {data, error} = await sb.from("billboards").select("*").order("kode");
+  if (error) { $("list").innerHTML = "<p class='in'>Gagal memuat data. Cek konfigurasi Supabase.</p>"; return; }
+  items = data; renderPublic(); renderAdmin();
+}
+function filtered() {
+  const q = $("q").value.toLowerCase(), s = $("fs").value, t = $("ft").value;
+  return items.filter(b => (!s || b.status === s) && (!t || b.tipe === t) &&
+    (!q || [b.nama, b.alamat, b.kawasan, b.kode].join(" ").toLowerCase().includes(q)));
+}
+function cardHtml(b, admin) {
+  const m = (b.media || []).find(x => x.type === "image");
+  return `<div class="card" onclick="${admin ? `openForm('${b.id}')` : `openDetail('${b.id}')`}">
+    ${m ? `<img loading="lazy" src="${esc(m.url)}">` : `<div class="ph"></div>`}
+    <div class="b"><span class="tag ${b.status === "tersedia" ? "ok" : "no"}">${esc(b.status)}</span> <span class="tag">${esc(b.tipe)} ${esc(b.ukuran)}</span>
+    <h3>${esc(b.nama)}</h3><div class="mut">${esc(b.kode)} · ${esc(b.kawasan || b.alamat)}</div>
+    <div style="margin-top:4px"><b>${rp(b.harga_bulan)}</b> <span class="mut">/ bulan</span></div></div></div>`;
+}
+function renderPublic() {
+  const f = filtered();
+  $("list").innerHTML = f.length ? f.map(b => cardHtml(b)).join("") : "<p class='in mut'>Tidak ada papan ditemukan.</p>";
+  Object.values(markers).forEach(m => m.remove()); markers = {};
+  f.forEach(b => { markers[b.id] = L.marker([b.lat, b.lng]).addTo(map).bindTooltip(b.nama).on("click", () => openDetail(b.id)); });
+  if (f.length) map.fitBounds(L.latLngBounds(f.map(b => [b.lat, b.lng])).pad(.2), {maxZoom: 16});
+}
+function openDetail(id) {
+  const b = items.find(x => x.id === id); if (!b) return;
+  const g = (b.media || []).map(m => m.type === "video" ? `<video src="${esc(m.url)}" controls playsinline></video>` : `<img src="${esc(m.url)}">`).join("");
+  const msg = encodeURIComponent(`Halo ST BINTANG BILBOARD, saya tertarik dengan papan ${b.kode} – ${b.nama}. Apakah masih tersedia?`);
+  $("dsheet").innerHTML = `${g ? `<div class="gal">${g}</div>` : ""}<div class="in">
+    <span class="tag ${b.status === "tersedia" ? "ok" : "no"}">${esc(b.status)}</span>
+    <h2 style="margin:6px 0 2px">${esc(b.nama)}</h2><div class="mut">${esc(b.kode)} · ${esc(b.alamat)}</div>
+    <div class="price"><div><span class="mut">Minggu</span><b>${rp(b.harga_minggu)}</b></div><div><span class="mut">Bulan</span><b>${rp(b.harga_bulan)}</b></div><div><span class="mut">Tahun</span><b>${rp(b.harga_tahun)}</b></div></div>
+    <dl><dt>Tipe</dt><dd>${esc(b.tipe)}</dd><dt>Ukuran</dt><dd>${esc(b.ukuran)}</dd><dt>Sisi</dt><dd>${esc(b.sisi)}</dd>
+    <dt>Pencahayaan</dt><dd>${esc(b.pencahayaan)}</dd><dt>Arah hadap</dt><dd>${esc(b.arah)}</dd><dt>Spesifikasi</dt><dd>${esc(b.spesifikasi)}</dd>
+    <dt>Trafik</dt><dd>${esc(b.trafik)}</dd><dt>Keramaian</dt><dd>${esc(b.trafik_catatan)}</dd></dl>
+    <div class="row"><a class="btn g" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${msg}">💬 Pesan via WhatsApp</a>
+    <a class="btn l" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${b.lat},${b.lng}">🗺️ Buka di Maps</a></div>
+    <button class="btn l" style="width:100%" onclick="closeM('dm')">Tutup</button></div>`;
+  $("dm").classList.add("on");
+}
+function closeM(id) { $(id).classList.remove("on"); }
+
+// ===== ADMIN =====
+function route() {
+  const a = location.hash === "#admin";
+  $("pub").style.display = a ? "none" : ""; $("adm").style.display = a ? "block" : "none";
+  $("lnk").textContent = a ? "← Katalog" : "Admin"; $("lnk").href = a ? "#" : "#admin";
+  if (!a) setTimeout(() => map.invalidateSize(), 50);
+  sb.auth.getSession().then(({data}) => setAuth(!!data.session));
+}
+window.onhashchange = route;
+function setAuth(v) { isAdmin = v; $("login").style.display = v ? "none" : ""; $("panel").style.display = v ? "" : "none"; }
+async function login() {
+  const {error} = await sb.auth.signInWithPassword({email: $("em").value, password: $("pw").value});
+  if (error) return alert("Login gagal: " + error.message);
+  setAuth(true);
+}
+async function logout() { await sb.auth.signOut(); setAuth(false); }
+function renderAdmin() {
+  const q = ($("aq")?.value || "").toLowerCase();
+  const f = items.filter(b => !q || [b.nama, b.kode, b.alamat].join(" ").toLowerCase().includes(q));
+  $("alist").innerHTML = f.map(b => cardHtml(b, true)).join("");
+}
+async function openForm(id) {
+  editing = id ? items.find(x => x.id === id) : null; media = editing ? [...(editing.media || [])] : [];
+  const b = editing || {};
+  $("ft2").textContent = editing ? "Ubah Papan" : "Papan Baru";
+  const set = (k, v) => $(k).value = v ?? "";
+  set("f_kode", b.kode || "KPG-" + String(items.length + 1).padStart(3, "0")); set("f_nama", b.nama); set("f_alamat", b.alamat); set("f_kawasan", b.kawasan);
+  set("f_tipe", b.tipe || "Billboard"); set("f_ukuran", b.ukuran); set("f_sisi", b.sisi || "1 sisi"); set("f_cahaya", b.pencahayaan || "Ada lampu");
+  set("f_arah", b.arah); set("f_spek", b.spesifikasi); set("f_trafik", b.trafik || "Sedang"); set("f_status", b.status || "tersedia"); set("f_tcat", b.trafik_catatan);
+  set("f_ht", b.harga_tahun); set("f_hb", b.harga_bulan); set("f_hm", b.harga_minggu); $("f_files").value = "";
+  set("f_pemilik", ""); set("f_kontak", ""); set("f_pcat", "");
+  if (editing) { const {data} = await sb.from("billboard_private").select("*").eq("billboard_id", id).maybeSingle();
+    if (data) { set("f_pemilik", data.pemilik); set("f_kontak", data.kontak); set("f_pcat", data.catatan); } }
+  $("fm").classList.add("on"); drawThumbs();
+  setTimeout(() => {
+    if (!pmap) { pmap = L.map("pmap").setView([-10.1718, 123.607], 13); L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(pmap); pmap.on("click", e => setPin(e.latlng.lat, e.latlng.lng)); }
+    pmap.invalidateSize(); if (pin) { pin.remove(); pin = null; }
+    $("coord").textContent = "Belum dipilih";
+    if (b.lat) { setPin(b.lat, b.lng); pmap.setView([b.lat, b.lng], 17); }
+  }, 100);
+}
+function setPin(lat, lng) { if (pin) pin.remove(); pin = L.marker([lat, lng]).addTo(pmap); $("coord").textContent = lat.toFixed(6) + ", " + lng.toFixed(6); }
+function gps() {
+  navigator.geolocation.getCurrentPosition(p => { setPin(p.coords.latitude, p.coords.longitude); pmap.setView([p.coords.latitude, p.coords.longitude], 18); },
+    () => alert("GPS tidak aktif / izin ditolak. Ketuk peta secara manual."), {enableHighAccuracy: true, timeout: 15000});
+}
+function drawThumbs() {
+  $("thumbs").innerHTML = media.map((m, i) => `<div style="position:relative">${m.type === "video" ? `<video src="${esc(m.url)}"></video>` : `<img src="${esc(m.url)}">`}
+    <button class="btn r" style="position:absolute;top:0;right:0;padding:0 6px" onclick="media.splice(${i},1);drawThumbs()">×</button></div>`).join("");
+}
+function shrink(file) {
+  return new Promise(res => {
+    const img = new Image(); img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = img.width * k; c.height = img.height * k; c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => res(b), "image/jpeg", .8);
+    }; img.onerror = () => res(file); img.src = URL.createObjectURL(file);
+  });
+}
+async function upload(file) {
+  const isV = file.type.startsWith("video/");
+  if (isV && file.size > 50 * 1024 * 1024) throw new Error("Video lebih dari 50 MB: " + file.name);
+  const body = isV ? file : await shrink(file);
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${isV ? (file.name.split(".").pop() || "mp4") : "jpg"}`;
+  const {error} = await sb.storage.from("media").upload(path, body, {contentType: isV ? file.type : "image/jpeg"});
+  if (error) throw error;
+  return {type: isV ? "video" : "image", url: sb.storage.from("media").getPublicUrl(path).data.publicUrl};
+}
+async function save() {
+  if (!$("f_nama").value.trim()) return alert("Nama wajib diisi");
+  if (!pin) return alert("Tentukan lokasi di peta");
+  const btn = $("sv"); btn.disabled = true; btn.textContent = "Menyimpan…";
+  try {
+    for (const f of $("f_files").files) media.push(await upload(f));
+    const n = id => Number(String($(id).value).replace(/\D/g, "")) || null, v = id => $(id).value.trim();
+    const row = {kode: v("f_kode"), nama: v("f_nama"), alamat: v("f_alamat"), kawasan: v("f_kawasan"), lat: pin.getLatLng().lat, lng: pin.getLatLng().lng,
+      tipe: v("f_tipe"), ukuran: v("f_ukuran"), sisi: v("f_sisi"), pencahayaan: v("f_cahaya"), arah: v("f_arah"), spesifikasi: v("f_spek"),
+      trafik: v("f_trafik"), trafik_catatan: v("f_tcat"), harga_tahun: n("f_ht"), harga_bulan: n("f_hb"), harga_minggu: n("f_hm"), status: v("f_status"), media};
+    const q = editing ? sb.from("billboards").update(row).eq("id", editing.id).select().single() : sb.from("billboards").insert(row).select().single();
+    const {data, error} = await q; if (error) throw error;
+    await sb.from("billboard_private").upsert({billboard_id: data.id, pemilik: v("f_pemilik"), kontak: v("f_kontak"), catatan: v("f_pcat")});
+    closeM("fm"); await load();
+  } catch (e) { alert("Gagal menyimpan: " + (e.message || e)); }
+  btn.disabled = false; btn.textContent = "Simpan";
+}
+init();
+</script>
+</body>
+</html>
